@@ -161,6 +161,7 @@
             epoch = 1 ;
             correct = false;
             this.trainingSize = size(inputMatrix,2);
+            outputSize = size(this.layers{end},1);
             while (~correct && epoch <= this.trainingTimes)
                 correct = true;                   
                 iter = 1;
@@ -175,7 +176,7 @@
                         endIndex = i * this.mini_batchSize;
                         expectedOut = expectedM(:, start : endIndex );
                         remaining = endIndex + 1;
-                        predictions = zeros(10, this.mini_batchSize);
+                        predictions = zeros(outputSize, this.mini_batchSize);
                         A = cell(1,size(this.layers,2)+1);  
                         % A is a 1D array
                         % A{i} holds the output matrix for ith element
@@ -214,8 +215,8 @@
                             % training size is smaller than the batch
                         end
                         endIndex = size(inputMatrix,2);
-                        expectedOut = inputMatrix(:,start : endIndex);
-                        predictions = zeros(10, endIndex - start + 1);
+                        expectedOut = expectedM(:,start : endIndex);
+                        predictions = zeros(outputSize, endIndex - start + 1);
                         A = cell(1,size(this.layers,2)+1);
                         N = cell(1,size(this.layers,2));
                         for i = start : endIndex
@@ -316,7 +317,10 @@
                  FMmatrix = cell(1,size(predictions,2));
                  TminusA = zeros(size(predictions,1),size(predictions,2));
                  % holds the matrix of t -a 
-                 temp = zeros(10,size(expectedOut,2));
+                 temp = zeros(size(predictions,1),size(predictions,2));
+                 size("predic " + size(predictions,1));
+                 out = outputToVec(this,1);
+                 size("output " + size(out,1));
                  for i = 1 : size(expectedOut,2)
                      temp(:,i) = outputToVec(this,expectedOut(i));
                  end
