@@ -172,6 +172,8 @@
                     remaining = 0;
                     for i = 1 : ( size(inputMatrix,2) / ...
                             this.mini_batchSize )
+                        disp("iter " + iter);
+                        iter = iter + 1;
                         start = (i-1) * this.mini_batchSize + 1;
                         endIndex = i * this.mini_batchSize;
                         expectedOut = expectedM(:, start : endIndex );
@@ -187,8 +189,8 @@
                         disp("start " + start);
                         disp("endIndex " + endIndex);
                         ex = 0;
+                        batchMSE = 0;
                         for i = start : endIndex
-                            iter = iter + 1;
                             input = inputMatrix(:,i);
                             predictions(:,i - start + 1) = this.forward(input);
                             
@@ -196,7 +198,7 @@
                             ex = expectedM(:,start);
                             ex = outputToVec(this,ex);
                             pIndex = (ex - this.prediction)' * (ex - this.prediction);
-                            this.mse = this.mse + pIndex;
+                            batchMSE = batchMSE + pIndex;
                             for n = 1 : size(this.nLayers,2)
                                 N{n} = [N{n}(:,1:end),this.nLayers{n}];
                             end
@@ -204,10 +206,15 @@
                                 A{j} = [A{j}(:,1:end),this.aLayers{j}];
                             end
                         end
-                        %plotting(this,ex,iter,epoch);
+                        this.mse = batchMSE / this.mini_batchSize;
+                        if (mod(iter,100) == 0)
+                            plotting(this,ex,iter,epoch);
+                        end
                         miniBatchUpdate(this,expectedOut,predictions,A,N);
                     end
                     if (remaining <= this.trainingSize) 
+                        disp("iter " + iter);
+                        iter = iter + 1;
                         start = remaining;
                         ex = 0;
                         if (start == 0)
@@ -219,8 +226,8 @@
                         predictions = zeros(outputSize, endIndex - start + 1);
                         A = cell(1,size(this.layers,2)+1);
                         N = cell(1,size(this.layers,2));
+                        batchMSE = 0;
                         for i = start : endIndex
-                            iter = iter + 1;
                             input = inputMatrix(:,i);
                             predictions(:,i - start + 1) = this.forward(input);
 
@@ -228,7 +235,7 @@
                             ex = expectedM(:,start);
                             ex = outputToVec(this,ex);
                             pIndex = (ex - this.prediction)' * (ex - this.prediction);
-                            this.mse = this.mse + pIndex;
+                            batchMSE = batchMSE + pIndex;
                             for n = 1 : size(this.nLayers,2)
                                 N{n} = [N{n}(:,1:end),this.nLayers{n}];
                             end
@@ -236,7 +243,10 @@
                                 A{j} = [A{j}(:,1:end),this.aLayers{j}];
                             end
                         end
-                        %plotting(this,ex,iter,epoch);
+                        this.mse = batchMSE / this.mini_batchSize;
+                        if (mod(iter,100) == 0)
+                            plotting(this,ex,iter,epoch);
+                        end
                         miniBatchUpdate(this,expectedOut,predictions,A,N);
                     end
                 else
@@ -288,7 +298,7 @@
             xlim([iter - ( this.trainingSize / 10 ), ...
                 iter + ( this.trainingSize / 10 )]); 
             % Set x-axis limits from 0 to 10
-            ylim([0, 1.5]); % Set y-axis limits from -1 to 1
+            ylim([0, 2]); % Set y-axis limits from -1 to 1
             pIndex = (ex - this.prediction)' * (ex - this.prediction);
             disp("expected " + ex);
             disp("prediction " + this.prediction);
