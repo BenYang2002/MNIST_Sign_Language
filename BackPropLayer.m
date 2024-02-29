@@ -11,10 +11,10 @@
         MNIST           % Boolean to modify output from a vector to a real number
         
         % Training Parameters
-        training        % Boolean indicating training or prediction mode
-        trainingTimes   % Maximum number of times going through the training set
-        trainingSize    % Size of the training set
-        plottingEpoch   % Epoch for plotting
+        training            % Boolean indicating training or prediction mode
+        trainingTimes       % Maximum number of times going through the training set
+        trainingSize        % Size of the training set
+        plottingEpoch = 0   % Epoch for plotting
         
         % Results 
         aLayers            % Cell array containing the output of each layer
@@ -83,7 +83,7 @@
             
             % Modify output if needed
             if (~this.training)
-                 this.prediction = this.modifyOutput(output);
+                 this.prediction = this.modifyOutput(this.prediction);
                 this.aLayers{end} = this.prediction;
             end
         end
@@ -276,7 +276,7 @@
             disp("prediction " + this.prediction);
             disp("Performance index: " + pIndex);
             this.xplots = [this.xplots,iter];
-            this.yplots = [this.yplots,this.mse];
+            this.yplots = [this.yplots,this.mse / iter];
             plot(this.xplots, this.yplots, 'ko-');
             drawnow();
             hold on
