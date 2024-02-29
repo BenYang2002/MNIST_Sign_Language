@@ -2,156 +2,154 @@
     %BACKPROPLAYER Summary of this class goes here
     %   Detailed explanation goes here
     properties
+        % Network Parameters
+        layers          % Cell array containing the arguments for each layer
         transfer
-        layers          % layers is a cell array
-        % layers contains the argument for each layer
-        %eg. layer{1} = {[wMat1,bVect1]}
-
-        aLayers         % aLayers is a cell array
-        % aLayers{i} contains the output of layer i + 1
-        % eg aLayer{i} = a(i+1) and the input is counted as the first
-        % output
-
-        nLayers         % nlayers is a cell arrya
-        % nLayers{i} contains the netinput of layer i
-
-        prediction
-
-        feedVect
-        sensitivity_Matrix % sensitivity_Matrix is a numeric matrix
-        % each column is the corresponding layer's sensitivity
-
         learning_rate
-
-        training      % this boolean indicates whether it is training or in 
-        % predicion mode. In prediction mode, solution will always be
-        % casted
+        mini_batchUp    % Boolean that activates the mini-batch update
+        mini_batchSize  % Size of mini-batch
+        MNIST           % Boolean to modify output from a vector to a real number
         
-        trainingTimes % number of max times going through the training set
-
-        trainingSize  % size of the training set
-
-        plottingEpoch
-
-        MNIST         % boolean that is used to modify output from a vector
-        % to a real number. eg. [0,0,1,0,0,0,0,0,0,0] to 3;
-
-        xplots        % array of x coordiante to plot
-        yplots        % array of y coordiante to plot
-
-        mini_batchUp = false % a boolean that activates the mini batch update
-        % the mini batch number is decided internally ( 1% of the total
-        % training data )
-
-        mini_batchSize = 500;
-
-        mse = 0;
-
+        % Training Parameters
+        training        % Boolean indicating training or prediction mode
+        trainingTimes   % Maximum number of times going through the training set
+        trainingSize    % Size of the training set
+        plottingEpoch   % Epoch for plotting
+        
+        % Results 
+        aLayers            % Cell array containing the output of each layer
+        nLayers            % Cell array containing the net input of each layer
+        prediction
+        mse                % Mean squared error
+        sensitivity_Matrix % Numeric matrix, each column represents sensitivity
+        
+        % Plotting Coordinates
+        xplots          % Array of x coordinates for plotting
+        yplots          % Array of y coordinates for plotting
     end
+
     methods
         function this = BackPropLayer(weightRow, weightColumn, ...
-                learning_rate,transfer, training, trainingTimes,MNIST)
-            %BACKPROPLAYER Construct an instance of this class
-            if (size(weightRow,2) ~= size(weightColumn,2))
-                error("dimention of weightRow and weightColumn " + ...
-                    "doesn't match");
+                              learning_rate, transfer, training, ...
+                              trainingTimes, MNIST, miniBatchup, batchSize)
+            % BACKPROPLAYER Construct an instance of this class
+            
+            % Check if the dimensions of weightRow and weightColumn match
+            if size(weightRow, 2) ~= size(weightColumn, 2)
+                error("Dimension of weightRow and weightColumn " + ...
+                      "doesn't match");
             end
-            for i = 1 : size(weightColumn,2)
-                weightMatrix = rand(weightRow(i),weightColumn(i)) * 0.1;
-                biasVec = rand(weightRow(i),1);
-                this.layers{i} = [weightMatrix,biasVec];
+            
+            % Initialize layers with random weight matrices and bias 
+            % vectors
+            for i = 1:size(weightColumn, 2)
+                weightMatrix = rand(weightRow(i), weightColumn(i)) * 0.1;
+                biasVec = rand(weightRow(i), 1);
+                this.layers{i} = [weightMatrix, biasVec];
             end
+            
+            % Set other properties
             this.learning_rate = learning_rate;
             this.transfer = transfer;
             this.training = training;
             this.trainingTimes = trainingTimes;
             this.MNIST = MNIST;
+            this.mini_batchUp = miniBatchup;
+            this.mini_batchSize = batchSize
         end
-
 
         function [output] = forward(this, input)
-            %FORWARD
-            %Input is a vector from previous layer or from input layer
-            this.feedVect = input;
+            % FORWARD
+            
+            % Input is a vector from the previous layer or from the input layer
             this.aLayers{1} = input;
-            for i = 1 : size(this.layers,2)
+            
+            % Iterate through layers
+            for i = 1:size(this.layers, 2)
                 parameterM = this.layers{i};
-                % this.aLayers{i} is the ath input parameter
-                % from first to end - 1 columns are the weight matrix
-                % with the last column as bias 
-                %disp(size(parameterM(:,1:end-1)));
-                %disp(size(this.feedVect));
-                layerNetInput = parameterM(:,1:end-1) * this.feedVect + ...
-                    parameterM(:,end); % net input
-                this.nLayers{i} = layerNetInput;
-                layerOut = this.activationFunc(layerNetInput, ...
-                    this.transfer{i});
-                this.feedVect = layerOut;
-                this.aLayers{i+1} = layerOut;
+                
+                % Compute net input for the layer
+                layerNetInput = parameterM(:, 1:end-1) * input + parameterM(:, end);
+                this.nLayers{i} = layerNetInput; % Save net input
+                
+                % Compute layer output using activation function
+                layerOut = this.activationFunc(layerNetInput, this.transfer{i});
+                input = layerOut; % Update feed vector
+                this.aLayers{i+1} = layerOut; % Save layer output
             end
-            output = this.aLayers{end};
-            output = this.modifyOutput(output);
-            this.prediction = output;
-            this.aLayers{end} = this.prediction;
+            
+            % Get final output
+            this.prediction = this.aLayers{end};
+            
+            % Modify output if needed
+            if (~this.training)
+                 this.prediction = this.modifyOutput(output);
+                this.aLayers{end} = this.prediction;
+            end
         end
 
-        function output = modifyOutput(this,input)
-            if (this.training)
-                output = input;
-                return;
-            end
+        function output = modifyOutput(this, input)
+            % Find element with largest confidence and use it as prediction
+            % input is the raw output of the network
+
+            % Find the maximum value and its index
             max = 0;
             out = 0;
-            for i = 1:size(input,1)
+            for i = 1:size(input, 1)
                 if max < input(i)
                     max = input(i);
                     out = i;
                 end
             end
-            if (~this.training)
-                if (this.MNIST)
-                    output = out - 1;
-                    return;
-                end
-                output = zeros(size(input,1),1);
-                output(out) = 1;
+            
+            % Modify output based on the MNIST flag
+            if this.MNIST
+                output = out - 1;
                 return;
             end
-            output = input;
+            
+            % Convert output to a one-hot encoded vector
+            output = zeros(size(input, 1), 1);
+            output(out) = 1;
         end
 
-        function der = takeDeravative(this,funcName,input)
-            % funcName specify the activation function name
-            % Input is the netInput of m layer
-            %disp(funcName);
-            if (isequal(funcName,"sigmoid"))
+        function der = takeDeravative(this, funcName, input)
+            % TAKEDERaVATIVE
+            % funcName specifies the activation function name
+            % Input is the net input of m layer
+            
+            % Check which activation function to use
+            if isequal(funcName, "sigmoid")
+                % Compute derivative for sigmoid activation function
                 result = this.sigmoid(input);
-                d = zeros(size(result,1),1);
-                for i = 1 : size(result,1)
+                d = zeros(size(result, 1), 1);
+                for i = 1:size(result, 1)
                     d(i) = result(i) * (1 - result(i));
                 end
                 der = diag(d);
                 return;
             end
-            if (isequal(funcName,"softmax"))
+            
+            if isequal(funcName, "softmax")
+                % Compute derivative for softmax activation function
                 sumS = sum(exp(input));
                 denominator = sumS^2;
-                der = zeros(size(input,1),size(input,1));
-                for column = 1 : size(input,1)
-                    for row = 1 : size(input,1)
-                        if (row == column)
-                            der(row,column) = (exp(input(row))*sumS - ...
-                                exp(input(row))^2) / denominator;
+                der = zeros(size(input, 1), size(input, 1));
+                for column = 1:size(input, 1)
+                    for row = 1:size(input, 1)
+                        if row == column
+                            der(row, column) = (exp(input(row)) * sumS - exp(input(row))^2) / denominator;
                         else
-                            der(row,column) = -1 * (exp(input(row)) * ...
-                            exp(input(column))) / denominator;  
+                            der(row, column) = -1 * (exp(input(row)) * exp(input(column))) / denominator;  
                         end
                     end
                 end
                 return;
             end
-            der = 1;
-            error("no matching transfer function");
+            
+            % If no matching transfer function is found
+            der = -1;
+            error("No matching transfer function");
         end
 
         function train(this, inputMatrix, expectedM)
