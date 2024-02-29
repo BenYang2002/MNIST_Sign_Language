@@ -86,6 +86,7 @@
                  this.prediction = this.modifyOutput(this.prediction);
                 this.aLayers{end} = this.prediction;
             end
+            output = this.prediction;
         end
 
         function output = modifyOutput(this, input)
@@ -162,7 +163,6 @@
             this.trainingSize = size(inputMatrix,2);
             while (~correct && epoch <= this.trainingTimes)
                 correct = true;                   
-                %disp("iter: " + epoch);
                 iter = 1;
                 this.mse = 0;
                 if ( this.mini_batchUp )
@@ -185,9 +185,17 @@
                         % jth element
                         disp("start " + start);
                         disp("endIndex " + endIndex);
+                        ex = 0;
                         for i = start : endIndex
+                            iter = iter + 1;
                             input = inputMatrix(:,i);
                             predictions(:,i - start + 1) = this.forward(input);
+                            
+                            % calculate performance Index
+                            ex = expectedM(:,start);
+                            ex = outputToVec(this,ex);
+                            pIndex = (ex - this.prediction)' * (ex - this.prediction);
+                            this.mse = this.mse + pIndex;
                             for n = 1 : size(this.nLayers,2)
                                 N{n} = [N{n}(:,1:end),this.nLayers{n}];
                             end
@@ -195,11 +203,12 @@
                                 A{j} = [A{j}(:,1:end),this.aLayers{j}];
                             end
                         end
-                        disp(predictions);
+                        %plotting(this,ex,iter,epoch);
                         miniBatchUpdate(this,expectedOut,predictions,A,N);
                     end
                     if (remaining <= this.trainingSize) 
                         start = remaining;
+                        ex = 0;
                         if (start == 0)
                             start = 1; % handle the case when total 
                             % training size is smaller than the batch
@@ -210,8 +219,15 @@
                         A = cell(1,size(this.layers,2)+1);
                         N = cell(1,size(this.layers,2));
                         for i = start : endIndex
+                            iter = iter + 1;
                             input = inputMatrix(:,i);
                             predictions(:,i - start + 1) = this.forward(input);
+
+                            % calculate performance Index
+                            ex = expectedM(:,start);
+                            ex = outputToVec(this,ex);
+                            pIndex = (ex - this.prediction)' * (ex - this.prediction);
+                            this.mse = this.mse + pIndex;
                             for n = 1 : size(this.nLayers,2)
                                 N{n} = [N{n}(:,1:end),this.nLayers{n}];
                             end
@@ -219,6 +235,7 @@
                                 A{j} = [A{j}(:,1:end),this.aLayers{j}];
                             end
                         end
+                        %plotting(this,ex,iter,epoch);
                         miniBatchUpdate(this,expectedOut,predictions,A,N);
                     end
                 else
@@ -276,6 +293,7 @@
             disp("prediction " + this.prediction);
             disp("Performance index: " + pIndex);
             this.xplots = [this.xplots,iter];
+            %this.yplots = [this.yplots,pIndex];
             this.yplots = [this.yplots,this.mse / iter];
             plot(this.xplots, this.yplots, 'ko-');
             drawnow();
@@ -296,17 +314,17 @@
                  % holds the sensitivity matrix for all
                  % layers and for all element in the batch
                  FMmatrix = cell(1,size(predictions,2));
-                 TminuxA = zeros(size(predictions,1),size(predictions,2));
+                 TminusA = zeros(size(predictions,1),size(predictions,2));
                  % holds the matrix of t -a 
                  temp = zeros(10,size(expectedOut,2));
                  for i = 1 : size(expectedOut,2)
                      temp(:,i) = outputToVec(this,expectedOut(i));
                  end
                  expectedOut = temp;
-                 TminuxA = expectedOut - predictions;
+                 TminusA = expectedOut - predictions;
                  % now proceed to calculate deravative
                  for i = 1 : size(expectedOut,2) % LOOP THROUGH EACH ELE
-                     errorOut = TminuxA(:,i);
+                     errorOut = TminusA(:,i);
                      netV = N{end}(:,i);
                      der = this.takeDeravative(this.transfer{end},netV);
                      sM = -2 * der * errorOut; % calculated the sensitivity for
@@ -342,7 +360,6 @@
                      this.layers{i} = [weights,bias];
                  end
              end
-             
         end
 
         function backwardUpdate(this,expectedOut)
