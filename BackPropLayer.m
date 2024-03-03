@@ -43,8 +43,8 @@
             % Initialize layers with random weight matrices and bias 
             % vectors
             for i = 1:size(weightColumn, 2)
-                weightMatrix = rand(weightRow(i), weightColumn(i)) * 0.1;
-                biasVec = rand(weightRow(i), 1);
+                weightMatrix = rand(weightRow(i), weightColumn(i)) * 0.2 - 0.1;
+                biasVec = 2 * rand(weightRow(i), 1) - 1;
                 this.layers{i} = [weightMatrix, biasVec];
             end
             
@@ -162,6 +162,7 @@
             correct = false;
             this.trainingSize = size(inputMatrix,2);
             outputSize = size(this.layers{end},1);
+            count = 1;
             while (~correct && epoch <= this.trainingTimes)
                 correct = true;                   
                 iter = 1;
@@ -172,8 +173,9 @@
                     remaining = 0;
                     for i = 1 : ( size(inputMatrix,2) / ...
                             this.mini_batchSize )
-                        disp("iter " + iter);
+                        %disp("iter " + iter);
                         iter = iter + 1;
+                        count = count + 1;
                         start = (i-1) * this.mini_batchSize + 1;
                         endIndex = i * this.mini_batchSize;
                         expectedOut = expectedM(:, start : endIndex );
@@ -186,8 +188,8 @@
                         % N{i} holds the netinput matrix for ith layer
                         % N{i,j} holds the netinput for ith layer and 
                         % jth element
-                        disp("start " + start);
-                        disp("endIndex " + endIndex);
+                        %disp("start " + start);
+                        %disp("endIndex " + endIndex);
                         ex = 0;
                         batchMSE = 0;
                         for i = start : endIndex
@@ -206,15 +208,16 @@
                                 A{j} = [A{j}(:,1:end),this.aLayers{j}];
                             end
                         end
-                        this.mse = batchMSE / this.mini_batchSize;
+                        this.mse = this.mse + batchMSE / this.mini_batchSize;
                         if (mod(iter,100) == 0)
-                            plotting(this,ex,iter,epoch);
+                            plotting2(this,ex,iter,epoch,count);
                         end
                         miniBatchUpdate(this,expectedOut,predictions,A,N);
                     end
                     if (remaining <= this.trainingSize) 
                         disp("iter " + iter);
                         iter = iter + 1;
+                        count = count + 1;
                         start = remaining;
                         ex = 0;
                         if (start == 0)
@@ -243,10 +246,8 @@
                                 A{j} = [A{j}(:,1:end),this.aLayers{j}];
                             end
                         end
-                        this.mse = batchMSE / this.mini_batchSize;
-                        if (mod(iter,100) == 0)
-                            plotting(this,ex,iter,epoch);
-                        end
+                        this.mse = this.mse + batchMSE / this.mini_batchSize;
+                        plotting2(this,ex,iter,epoch,count);
                         miniBatchUpdate(this,expectedOut,predictions,A,N);
                     end
                 else
@@ -288,17 +289,41 @@
             hold off
         end
 
+        function plotting2(this,ex,iter,epoch,count)
+            %if (this.plottingEpoch ~= epoch)
+            %    this.plottingEpoch = epoch;
+            %    this.xplots = [];
+            %    this.yplots = [];
+            %    hold off;
+            %end
+            %xlim([count - ( this.trainingSize / 10 ), ...
+            %    count + ( this.trainingSize / 10 )]); 
+            % Set x-axis limits from 0 to 10
+            ylim([0, 1.5]); % Set y-axis limits from -1 to 1
+            pIndex = (ex - this.prediction)' * (ex - this.prediction);
+            disp("expected " + ex);
+            disp("prediction " + this.prediction);
+            disp("Performance index: " + pIndex);
+            disp("count " + count);
+            this.xplots = [this.xplots,count];
+            %this.yplots = [this.yplots,pIndex];
+            this.yplots = [this.yplots,this.mse / iter];
+            plot(this.xplots, this.yplots, 'ko-');
+            drawnow();
+            hold on
+        end
+
         function plotting(this,ex,iter,epoch)
             if (this.plottingEpoch ~= epoch)
                 this.plottingEpoch = epoch;
-                this.xplots = [];
-                this.yplots = [];
-                hold off;
+            %    this.xplots = [];
+            %    this.yplots = [];
+            %    hold off;
             end
             xlim([iter - ( this.trainingSize / 10 ), ...
                 iter + ( this.trainingSize / 10 )]); 
             % Set x-axis limits from 0 to 10
-            ylim([0, 2]); % Set y-axis limits from -1 to 1
+            ylim([0, 1.5]); % Set y-axis limits from -1 to 1
             pIndex = (ex - this.prediction)' * (ex - this.prediction);
             disp("expected " + ex);
             disp("prediction " + this.prediction);
@@ -312,9 +337,14 @@
         end
 
         function output = outputToVec(this,expectedOut)
+            disp("here")
             exOutMod = zeros(size(this.aLayers{end},1),1);
+            if (expectedOut > 9)
+                expectedOut = expectedOut - 1;
+            end
             exOutMod(expectedOut+1) = 1; 
             output = exOutMod; % we map the output from a scalar 
+            disp("size " + size(exOutMod))
             % to the vector
         end
 
