@@ -48,18 +48,17 @@ classdef MultiLayerNetwork < handle
 
             % save first output (p)
             obj.most_recent_outputs{1} = result;
-
             % for each neuron layer
-            for i = 1:obj.num_of_layers
+            for i = 1:obj.num_of_layers - 1
                 % Compute output
                 result = myLogSigmoid(obj.weight_array{i} * result + obj.bias_array{i});
 
                 % Save
                 obj.most_recent_outputs{i + 1} = result;
             end
-
-            % Return final result
-            a = result;
+            netInput = obj.weight_array{end} * obj.most_recent_outputs{obj.num_of_layers} + obj.bias_array{obj.num_of_layers};
+            a = softmax(netInput);
+            obj.most_recent_outputs{obj.num_of_layers+1} = a;
         end
         
         % Function that updates the weigt matrix and bias vector of each
@@ -73,7 +72,22 @@ classdef MultiLayerNetwork < handle
             one = ones(size(obj.most_recent_outputs{obj.num_of_layers + 1}));
 
             % Find sensitivity of final layer
-            obj.sensitivity_array{obj.num_of_layers} = -2 .* ((one - obj.most_recent_outputs{obj.num_of_layers + 1}) .* ((obj.most_recent_outputs{obj.num_of_layers + 1})) .* (target  - obj.most_recent_outputs{obj.num_of_layers + 1}));
+            input = obj.most_recent_outputs{obj.num_of_layers};
+            netInput = obj.weight_array{end} * input + obj.bias_array{end};
+            sumS = sum(exp(netInput));
+            denominator = sumS^2;
+            der = zeros(size(netInput, 1), size(netInput, 1));
+            for column = 1:size(netInput, 1)
+                for row = 1:size(netInput, 1)
+                    if row == column
+                        der(row, column) = (exp(netInput(row)) * sumS - exp(netInput(row))^2) / denominator;
+                    else
+                        der(row, column) = -1 * (exp(netInput(row)) * exp(netInput(column))) / denominator;  
+                    end
+                end
+            end
+            obj.sensitivity_array{obj.num_of_layers} = -2 * der * (target  - obj.most_recent_outputs{obj.num_of_layers + 1});
+            %obj.sensitivity_array{obj.num_of_layers} = -2 .* ((one - obj.most_recent_outputs{obj.num_of_layers + 1}) .* ((obj.most_recent_outputs{obj.num_of_layers + 1})) .* (target  - obj.most_recent_outputs{obj.num_of_layers + 1}));
 
             % Get sensitivity for all other layers
             for i = obj.num_of_layers -1:-1:1
