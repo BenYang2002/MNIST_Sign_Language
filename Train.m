@@ -10,7 +10,8 @@ function Train(network, data)
         if count > 100
             break
         end
-
+        xplots = [];
+        yplots = [];
         for i = 1:size(data, 1)
 
             % Get training vector and corresponding expected output
@@ -26,6 +27,15 @@ function Train(network, data)
             % compute error and save it
             a = forward(network, input);
             e = target - a;
+            disp("targer " + target);
+            disp("a " + a);
+            pIndex = e'*e;
+            xplots = [xplots,i];
+            yplots = [yplots,pIndex];
+            if (mod(i,size(data,1)/100))
+                plotting(xplots,yplots);
+                drawnow();
+            end
             error_matrix(:, i) = e;
 
             % Compute backprop for this specific input
