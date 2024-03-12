@@ -74,20 +74,17 @@ classdef MultiLayerNetwork < handle
             % Find sensitivity of final layer
             input = obj.most_recent_outputs{obj.num_of_layers};
             netInput = obj.weight_array{end} * input + obj.bias_array{end};
-            sumS = sum(exp(netInput));
-            denominator = sumS^2;
-            der = zeros(size(netInput, 1), size(netInput, 1));
-            for column = 1:size(netInput, 1)
-                for row = 1:size(netInput, 1)
-                    if row == column
-                        der(row, column) = (exp(netInput(row)) * sumS - exp(netInput(row))^2) / denominator;
-                    else
-                        der(row, column) = -1 * (exp(netInput(row)) * exp(netInput(column))) / denominator;  
-                    end
+            der = softmaxDerivative(obj,netInput);
+            vec = zeros(size(netInput,1),1);
+            for i = 1 : size(netInput,1)
+                if (obj.most_recent_outputs{obj.num_of_layers + 1}(i) ~= 0)
+                    vec(i) = target(i) / obj.most_recent_outputs{obj.num_of_layers + 1}(i);
+                else
+                    vec(i) = 0;
                 end
             end
-            obj.sensitivity_array{obj.num_of_layers} = -2 * der * (target  - obj.most_recent_outputs{obj.num_of_layers + 1});
-            %obj.sensitivity_array{obj.num_of_layers} = -2 .* ((one - obj.most_recent_outputs{obj.num_of_layers + 1}) .* ((obj.most_recent_outputs{obj.num_of_layers + 1})) .* (target  - obj.most_recent_outputs{obj.num_of_layers + 1}));
+            obj.sensitivity_array{obj.num_of_layers} = der * vec;
+            %obj.sensitivity_array{obj.num_of_layers} = -2 * der * (target  - obj.most_recent_outputs{obj.num_of_layers + 1});
 
             % Get sensitivity for all other layers
             for i = obj.num_of_layers -1:-1:1
@@ -104,6 +101,21 @@ classdef MultiLayerNetwork < handle
 
                 % Update bias vector for each layer
                 obj.bias_array{i} = obj.bias_array{i} - learning_rate .* obj.sensitivity_array{i};
+            end
+        end
+    end
+end
+
+function der = softmaxDerivative(obj,netInput)
+    sumS = sum(exp(netInput));
+    denominator = sumS^2;
+    der = zeros(size(netInput, 1), size(netInput, 1));
+    for row = 1:size(netInput, 1)
+        for column = 1:size(netInput, 1)
+            if row == column
+                der(row, column) = (exp(netInput(row)) * sumS - exp(netInput(row))^2) / denominator;
+            else
+                der(row, column) = -1 * (exp(netInput(row)) * exp(netInput(column))) / denominator;  
             end
         end
     end
