@@ -6,7 +6,7 @@ function a = Test(network, data)
     for i = 1:size(data, 1)
 
         % Get test and target inputs
-        input = data(i, 2:end);
+        input = data(i, 3:end);
         input = double(input) / 255;
 
        result(i, 1) = data(i, 1);
