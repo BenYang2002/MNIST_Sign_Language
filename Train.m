@@ -5,11 +5,14 @@ function Train(network, data)
     error_matrix = ones(26, size(data, 2));
     % only stop training once the error on each term of the input patterns has
     % reached acceptable range
-    count = 0;
+    count = 1;
+    totalX = [];
+    totalY= [];
     while (any(error_matrix(:) > allowable_error))
-        if count > 100
+        if count > 3
             break
         end
+        disp("epoch: " + count);
         xplots = [];
         yplots = [];
         mse = 0;
@@ -27,20 +30,12 @@ function Train(network, data)
             % Run forward to save results to use in backprop,
             % compute error and save it
             a = forward(network, input);
-            disp("targer " + size(target));
-            disp("a " + size(a));
             e = target - a;
-            disp("targer " + target);
-            disp("a " + a);
             pIndex = e'*e;
             mse = mse + pIndex;
-            if (mod(i,size(data,1)/100) == 0)
+            if (mod(i,int32(size(data,1)/10)) == 0)
                 xplots = [xplots,i];
                 yplots = [yplots,mse/i];
-                if (mod(i,int32(size(data,1)/5)) == 0)
-                    xplots = [];
-                    yplots = [];
-                end
                 plotting(xplots,yplots);
                 drawnow();
             end
@@ -49,8 +44,9 @@ function Train(network, data)
             % Compute backprop for this specific input
             backward(network, target);
         end
-
+        totalX = [totalX,xplots + ( count - 1 ) * size(data, 1)];
+        totalY = [totalY,yplots];
         count = count + 1;
     end
-    disp(count)
+    plotting(totalX,totalY);
 end
