@@ -11,20 +11,24 @@ classdef MultiLayerNetwork < handle
         bias_array % Cell array that holds the bias vector for each layer
         most_recent_outputs % Cell array used in backpropagation, holds the output vector for each layer
         sensitivity_array % Cell array used to get sensitivities of each layer
+        crossEN % A boolean indicating we are using the cross entropy, we use mse by default
+        softM % A boolean indicating we are using the softmax in the output layer
+
     end
 
     methods
         % Constructor. Takes in the number of layers (layer_count) disincluding the input layer
         % and the input/output pair for each layer (layer_details, an array) as arguments and
         % initializes the weight matrix of each layer.
-        function obj = MultiLayerNetwork(layer_count, layer_details)
+        function obj = MultiLayerNetwork(layer_count, layer_details,cE,sM)
             % Initialize properties from layer_count
             obj.num_of_layers = layer_count;
             obj.most_recent_outputs = cell(1, layer_count + 1); % This Cell array includes the input layer
             obj.weight_array = cell(1, layer_count);
             obj.bias_array = cell(1, layer_count);
             obj.sensitivity_array = cell(1, layer_count); % This Cell array includes the input layer
-
+            obj.crossEN = cE;
+            obj.softM = sM;
             % For each neuron layer
             for i = 1:layer_count
                     % Initialize each weight matrix using the respective
@@ -74,20 +78,26 @@ classdef MultiLayerNetwork < handle
             % Find sensitivity of final layer
             input = obj.most_recent_outputs{obj.num_of_layers};
             netInput = obj.weight_array{end} * input + obj.bias_array{end};
-            sumS = sum(exp(netInput));
-            denominator = sumS^2;
-            der = zeros(size(netInput, 1), size(netInput, 1));
-            for column = 1:size(netInput, 1)
-                for row = 1:size(netInput, 1)
-                    if row == column
-                        der(row, column) = (exp(netInput(row)) * sumS - exp(netInput(row))^2) / denominator;
-                    else
-                        der(row, column) = -1 * (exp(netInput(row)) * exp(netInput(column))) / denominator;  
-                    end
-                end
+            der = 0;
+            if (obj.softM)
+                der = softmaxDerivative(obj,netInput);
+            else
+                one = ones(size(obj.most_recent_outputs{obj.num_of_layers + 1}));
+                obj.sensitivity_array{obj.num_of_layers} = -2 .* ((one - obj.most_recent_outputs{obj.num_of_layers + 1}) .* ((obj.most_recent_outputs{obj.num_of_layers + 1})) .* (target  - obj.most_recent_outputs{obj.num_of_layers + 1}));
             end
-            obj.sensitivity_array{obj.num_of_layers} = -2 * der * (target  - obj.most_recent_outputs{obj.num_of_layers + 1});
-            %obj.sensitivity_array{obj.num_of_layers} = -2 .* ((one - obj.most_recent_outputs{obj.num_of_layers + 1}) .* ((obj.most_recent_outputs{obj.num_of_layers + 1})) .* (target  - obj.most_recent_outputs{obj.num_of_layers + 1}));
+            %vec = zeros(size(netInput,1),1);
+            %for i = 1 : size(netInput,1)
+            %    if (obj.most_recent_outputs{obj.num_of_layers + 1}(i) ~= 0)
+            %        vec(i) = target(i) / obj.most_recent_outputs{obj.num_of_layers + 1}(i);
+            %    else
+            %        vec(i) = 0;
+            %    end
+            %end
+            if (obj.softM && obj.crossEN)
+                obj.sensitivity_array{obj.num_of_layers} = obj.most_recent_outputs{obj.num_of_layers + 1} - target;
+            elseif (obj.softM)
+                obj.sensitivity_array{obj.num_of_layers} = -2 * der * (target  - obj.most_recent_outputs{obj.num_of_layers + 1});
+            end
 
             % Get sensitivity for all other layers
             for i = obj.num_of_layers -1:-1:1
@@ -108,3 +118,19 @@ classdef MultiLayerNetwork < handle
         end
     end
 end
+
+function der = softmaxDerivative(obj,netInput)
+    sumS = sum(exp(netInput));
+    denominator = sumS^2;
+    der = zeros(size(netInput, 1), size(netInput, 1));
+    for row = 1:size(netInput, 1)
+        for column = 1:size(netInput, 1)
+            if row == column
+                der(row, column) = (exp(netInput(row)) * sumS - exp(netInput(row))^2) / denominator;
+            else
+                der(row, column) = -1 * (exp(netInput(row)) * exp(netInput(column))) / denominator;  
+            end
+        end
+    end
+end
+
