@@ -1,7 +1,7 @@
 function output = softmax(input)
-    total = sum(exp(input));
-    for i = 1 : size(input,1)
-        input(i) = exp(input(i)) / total;
-    end
-    output = input;
+    % Subtract the maximum value for numerical stability
+    inputShifted = input - max(input);
+    expInput = exp(inputShifted);
+    total = sum(expInput);
+    output = expInput / total;
 end
