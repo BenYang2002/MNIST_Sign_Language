@@ -1,5 +1,5 @@
 training_data = readmatrix('train.csv');
-network = MultiLayerNetwork(2, [784, 100, 100, 26],false,false);
+network = MultiLayerNetwork(2, [784, 100, 100, 26],true,true);
 test_data = readmatrix('test.csv');
 test_data2 = training_data(25001:end,:);
 training_data = training_data(1:25000,:);
@@ -17,3 +17,5 @@ expected = test_data2(:,2);
 accuracy = calAccuracy(expected,label2);
 disp("accuracy");
 disp(accuracy);
+disp("total accuracy");
+disp((sum(accuracy(1:9,:)) + sum(accuracy(11:25,:))) / 24);
