@@ -1,5 +1,5 @@
 training_data = readmatrix('train.csv');
-network = MultiLayerNetwork(2, [784, 100, 100, 26],true,true);
+network = MultiLayerNetwork(2, [784, 100, 100, 26],false,false);
 test_data = readmatrix('test.csv');
 test_data2 = training_data(25001:end,:);
 training_data = training_data(1:25000,:);
