@@ -61,7 +61,13 @@ classdef MultiLayerNetwork < handle
                 obj.most_recent_outputs{i + 1} = result;
             end
             netInput = obj.weight_array{end} * obj.most_recent_outputs{obj.num_of_layers} + obj.bias_array{obj.num_of_layers};
-            a = softmax(netInput);
+            a = 0;
+            if (obj.softM)
+                a = softmax(netInput);
+                %a = softmax(netInput);
+            else
+                a = myLogSigmoid(netInput);
+            end
             obj.most_recent_outputs{obj.num_of_layers+1} = a;
         end
         
@@ -85,14 +91,7 @@ classdef MultiLayerNetwork < handle
                 one = ones(size(obj.most_recent_outputs{obj.num_of_layers + 1}));
                 obj.sensitivity_array{obj.num_of_layers} = -2 .* ((one - obj.most_recent_outputs{obj.num_of_layers + 1}) .* ((obj.most_recent_outputs{obj.num_of_layers + 1})) .* (target  - obj.most_recent_outputs{obj.num_of_layers + 1}));
             end
-            %vec = zeros(size(netInput,1),1);
-            %for i = 1 : size(netInput,1)
-            %    if (obj.most_recent_outputs{obj.num_of_layers + 1}(i) ~= 0)
-            %        vec(i) = target(i) / obj.most_recent_outputs{obj.num_of_layers + 1}(i);
-            %    else
-            %        vec(i) = 0;
-            %    end
-            %end
+
             if (obj.softM && obj.crossEN)
                 obj.sensitivity_array{obj.num_of_layers} = obj.most_recent_outputs{obj.num_of_layers + 1} - target;
             elseif (obj.softM)
