@@ -13,7 +13,17 @@ classdef MultiLayerNetwork < handle
         sensitivity_array % Cell array used to get sensitivities of each layer
         crossEN % A boolean indicating we are using the cross entropy, we use mse by default
         softM % A boolean indicating we are using the softmax in the output layer
-
+        rollBackW % the weight used to roll back
+        rollBackB % the bias used to roll back
+        dynamicTolerance = 0.05 % the tolerance of performance decrease without rolling 
+        increaseRate = 0.05 % the percent of increase in learning rate
+        decreaseRate = 0.05 % the percent of decrease in learning rate
+        currentLR = 0.07 % current learning rate
+        lowerBound = 0.005;
+        upperBound = 0.2;
+        accumulatedCE = 0;
+        accumulatedSE = 0;
+        temp = [];
     end
 
     methods
@@ -39,7 +49,8 @@ classdef MultiLayerNetwork < handle
                     % output value from layer_details
                     obj.bias_array{i} = 2 * rand(layer_details(2* i), 1) - 1;
             end
-
+            obj.rollBackW = obj.weight_array;
+            obj.rollBackB = obj.bias_array;
         end
         
         % Function that computes the output of the network on a passed in
@@ -77,7 +88,7 @@ classdef MultiLayerNetwork < handle
         % Note that the derivative of logsigm is equivalent to (1 - a) (a).
         % Refer to page 11-26 for the full equations.
         function obj = backward(obj, target)
-
+            
             % create an array of ones to use in the derivative
             one = ones(size(obj.most_recent_outputs{obj.num_of_layers + 1}));
 
@@ -105,7 +116,7 @@ classdef MultiLayerNetwork < handle
                 obj.sensitivity_array{i} = diag((one - obj.most_recent_outputs{i+1}) .* (obj.most_recent_outputs{i+1})) * obj.weight_array{i+1}' * obj.sensitivity_array{i + 1};
             end
 
-            learning_rate = 0.07;
+            learning_rate = obj.currentLR;
 
             for i = 1: obj.num_of_layers
                 % Update weight matrix for each layer
